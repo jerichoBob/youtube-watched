@@ -1,3 +1,6 @@
 openai
 youtube-transcript-api
 python-dotenv
+browser-use
+playwright
+python-dateutil
