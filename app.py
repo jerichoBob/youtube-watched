@@ -10,8 +10,9 @@ import openai
 from pydantic import BaseModel, SecretStr
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from browser_use import Agent
+from browser_use import Agent, Controller, ActionResult
 import asyncio
+controller = Controller()
 
 # Load environment variables from .env.local first, then fall back to .env
 load_dotenv('.env.local')
@@ -40,11 +41,14 @@ class VideoSummaryResponse(BaseModel):
     learnings: List[str]
 
 class VideoInfo(BaseModel):
-    video_id: str
     title: str
     author: str
     watch_date: datetime
+    video_url: str
     description: Optional[str] = ""
+
+class VideoInfoList(BaseModel):
+    videos: List[VideoInfo]
 
 # -----------------------------------------------------------------------------------
 # 2. Function to Get Watch History using browser-use
@@ -69,7 +73,100 @@ def get_google_credentials():
     
     return username, password
 
-async def get_watch_history(days: int = 7) -> List[VideoInfo]:
+
+@controller.action('Give a prompt to ask the human to complete 2FA')
+async def ask_human(prompt: str) -> str:
+    answer = input(f'\n{prompt}\nInput: ')
+    return ActionResult(extracted_content=answer)
+
+@controller.action('Save VideoInfo', param_model=VideoInfoList)
+def save_video_info(params: VideoInfoList):
+    """Save VideoInfo objects to JSON file with deduplication.
+    
+    Args:
+        params (VideoInfoList): A Pydantic model containing a list of VideoInfo objects
+                              Each VideoInfo has: title, author, watch_date, video_url, description
+    """
+    print(f"\n=== Starting save_video_info ===")
+    print(f"Input params type: {type(params)}")
+    if hasattr(params, 'videos'):
+        print(f"Number of videos in input: {len(params.videos)}")
+        print(f"First video sample: {params.videos[0] if params.videos else 'No videos'}")
+    
+    file_path = 'video_info.json'
+    existing_data = []
+    
+    # Read existing data if file exists
+    print(f"\n--- Reading existing data from {file_path} ---")
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, 'r') as f:
+                existing_data = json.load(f)
+            print(f"Successfully loaded {len(existing_data)} existing videos")
+        except json.JSONDecodeError:
+            print(f"Warning: Could not parse existing {file_path}, starting fresh")
+    else:
+        print(f"No existing file found at {file_path}, will create new")
+    
+    # Convert new VideoInfo objects to dict
+    print("\n--- Converting VideoInfo objects to dict ---")
+    try:
+        new_videos = [
+            {
+                'video_url': video.video_url,
+                'title': video.title,
+                'author': video.author,
+                'watch_date': video.watch_date.isoformat(),
+                'description': video.description
+            }
+            for video in params.videos
+        ]
+        print(f"Successfully converted {len(new_videos)} videos")
+        print(f"Sample converted video: {new_videos[0] if new_videos else 'No videos'}")
+    except Exception as e:
+        print(f"Error converting videos to dict: {str(e)}")
+        print(f"Videos data: {params.videos}")
+        return
+    
+    # Combine existing and new data, using video_url as unique key
+    print("\n--- Combining existing and new data ---")
+    try:
+        video_dict = {video['video_url']: video for video in existing_data}
+        print(f"Created dict from {len(video_dict)} existing videos")
+        
+        video_dict.update({video['video_url']: video for video in new_videos})
+        print(f"Updated dict with new videos, now contains {len(video_dict)} videos")
+    except Exception as e:
+        print(f"Error combining data: {str(e)}")
+        return
+    
+    # Convert back to list and sort by watch_date
+    print("\n--- Sorting combined videos ---")
+    try:
+        combined_videos = list(video_dict.values())
+        combined_videos.sort(key=lambda x: x['watch_date'], reverse=True)
+        print(f"Successfully sorted {len(combined_videos)} videos")
+    except Exception as e:
+        print(f"Error sorting videos: {str(e)}")
+        return
+    
+    # Write the combined data back to file
+    print(f"\n--- Writing data to {file_path} ---")
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(combined_videos, f, indent=2)
+        print(f"Successfully wrote file")
+    except Exception as e:
+        print(f"Error writing file: {str(e)}")
+        return
+    
+    print(f"\n=== Completed save_video_info ===")
+    print(f"Saved {len(new_videos)} new videos")
+    print(f"Total videos in file: {len(combined_videos)}")
+    print("=====================================\n")
+
+
+async def get_watch_history(days: int = 2) -> List[VideoInfo]:
     """
     Retrieve watch history using browser-use to access YouTube directly.
     """
@@ -78,40 +175,37 @@ async def get_watch_history(days: int = 7) -> List[VideoInfo]:
     
     # Get credentials from environment
     un, pw = get_google_credentials()
-    
-    # Create a task for the browser agent with credentials
-    task = f"""
-    1. Go to https://accounts.google.com/signin
-    2. Find the email/username input field and the google_username
-    3. Click next or continue
-    4. Find the password input field and enter: google_password
-    5. Check if there's a 2FA screen (look for elements mentioning "2-Step Verification" or showing a phone icon)
-    6. If 2FA is detected:
-       - Print "2FA_REQUIRED" to the console
-       - Wait for further instructions before proceeding
-    7. After successful login (or after 2FA completion), go to https://www.youtube.com/feed/history
-    8. Wait for the page to load completely
-    9. For each video in the history:
-       - Extract the video title
-       - Extract the channel name (author)
-       - Extract the watch date
-       - Extract the video URL
-       - Extract any available description
-    10. Only include videos watched after {threshold_date.isoformat()}
-    11. Return the data as a JSON array with objects containing:
-       - title
-       - author
-       - watch_date
-       - video_id (extracted from URL)
-       - description
-    """
+    sensitive_data = {'google_username': un, 'google_password': pw}
+
+    tasklist_new = f"""
+    1. Go to https://myactivity.google.com/product/youtube/?hl=en
+    2. If not signed in:
+       - Sign in with google_username and google_password
+       - If 2FA is detected, print "2FA_REQUIRED" and wait for user input
+    4. Wait for the page to load completely. This page has infinite scroll, so when you scroll, wait for the page to update. Scroll until you meet the time-period search criteria
+    5. For each batch of videos visible on the page, create a VideoInfoList object:
+       - For each video, create a VideoInfo object with these details for each video:
+         * title
+         * author (channel name)
+         * watch date
+         * video URL (to get video_id)
+         * description (if available)
+    6. Once the VideoInfoList objects are created:
+       - Sort them by watch date (newest first)
+       - Save the VideoInfoList object using the `save_video_info` action
+       - Scroll down to load more videos
+       - Wait for the page to update
+       - Stop if no new videos load or if we find videos older than {threshold_date.isoformat()}
+    6. Exit when done
+    """    
     
     try:
         # Create and run the agent
         agent = Agent(
-            task=task,
+            task=tasklist_new,
             llm=ChatOpenAI(model="gpt-4o"),
-            sensitive_data = {'google_username': un, 'google_password': pw}
+            sensitive_data = sensitive_data,
+            controller=controller
         )
         
         # Start the agent
@@ -123,8 +217,18 @@ async def get_watch_history(days: int = 7) -> List[VideoInfo]:
             # After 2FA is completed, continue with the history fetch
             result = await agent.run()
         
-        # Parse the result (assuming it's a JSON string)
-        videos_data = json.loads(result)
+        # Extract the last message content from the agent history
+        if hasattr(result, 'messages') and result.messages:
+            last_message = result.messages[-1].content
+            try:
+                videos_data = json.loads(last_message)
+            except json.JSONDecodeError as e:
+                print(f"Error parsing agent response as JSON: {str(e)}")
+                print(f"Response content: {last_message}")
+                return []
+        else:
+            print("No valid response from agent")
+            return []
         
         # Convert the data into VideoInfo objects
         videos = []
