@@ -1,0 +1,54 @@
+{
+  "save_video_info": {
+    "videos": [
+      {
+        "title": "Google AI studio replaces your AI tech stack (full demo)",
+        "author": "Greg Isenberg",
+        "watch_date": "2025-02-15T23:29:00Z",
+        "video_url": "https://www.youtube.com/watch?v=6h9y1rLem4c"
+      },
+      {
+        "title": "Intro to Sierra with Bret Taylor and Clay Bavor",
+        "author": "Sierra",
+        "watch_date": "2025-02-15T23:28:00Z",
+        "video_url": "https://www.youtube.com/watch?v=u7IscOh_a_I"
+      },
+      {
+        "title": "when a director knows how to start a movie",
+        "author": "Just One More Thing",
+        "watch_date": "2025-02-15T21:36:00Z",
+        "video_url": "https://www.youtube.com/watch?v=aJ2lTtJcZ7w"
+      },
+      {
+        "title": "SpaceX Just Smashed Multiple Records! Wow!",
+        "author": "Marcus House",
+        "watch_date": "2025-02-15T21:24:00Z",
+        "video_url": "https://www.youtube.com/watch?v=rTLG99xoCJw"
+      },
+      {
+        "title": "Augment Code: The 100% FREE VSCode Assistant That DESTROYS Cline & Roo-Code!",
+        "author": "Codewello",
+        "watch_date": "2025-02-15T21:20:00Z",
+        "video_url": "https://www.youtube.com/watch?v=F6Uqf55MRu8"
+      },
+      {
+        "title": "DeepSeek, China, OpenAI, NVIDIA, xAI, TSMC, Stargate, and AI Megaclusters | Lex Fridman Podcast #459",
+        "author": "Lex Fridman",
+        "watch_date": "2023-02-14T22:54:00Z",
+        "video_url": "https://www.youtube.com/watch?v=_1f-o0nqpEI"
+      },
+      {
+        "title": "Nate Bargatze Tells the Full Story Behind SNL's George Washington Sketch l Good One Podcast",
+        "author": "Vulture",
+        "watch_date": "2023-02-14T17:53:00Z",
+        "video_url": "https://www.youtube.com/watch?v=5TumjduG5Fk"
+      },
+      {
+        "title": "Mac Studio Storage Upgrade - Made EASY with Custom Parts",
+        "author": "dosdude1",
+        "watch_date": "2023-02-14T17:28:00Z",
+        "video_url": "https://www.youtube.com/watch?v=HDFCurB3-0Q"
+      }
+    ]
+  }
+}

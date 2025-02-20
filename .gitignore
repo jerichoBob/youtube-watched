@@ -172,3 +172,5 @@ cython_debug/
 .env.*
 youtube_summaries*
 agent_history.gif
+
+data/*

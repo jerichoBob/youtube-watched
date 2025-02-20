@@ -8,7 +8,7 @@ This program fetches your YouTube watch history for the past week, retrieves vid
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.txt -U
 ```
 
 2. Set up YouTube API credentials:
