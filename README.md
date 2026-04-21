@@ -1,52 +1,45 @@
 # YouTube Watch History Summarizer
 
-This program fetches your YouTube watch history for the past week, retrieves video transcripts and descriptions, and generates AI-powered summaries with key points and learnings for each video.
+Fetches your YouTube watch history by automating a browser session against `myactivity.google.com`, then optionally retrieves video transcripts and generates AI-powered summaries.
 
 ## Setup
 
 ```shell
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt -U
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+playwright install
 ```
 
-2. Set up YouTube API credentials:
-   - Go to the [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select an existing one
-   - Enable the YouTube Data API v3
-   - Create OAuth 2.0 credentials (Desktop application)
-   - Download the client configuration file and save it as `client_secrets.json` in the project directory
-
-3. Create a `.env.local` file with your API keys:
+Create a `.env.local` file with your credentials:
 ```
-YOUTUBE_API_KEY=your_youtube_api_key
 OPENAI_API_KEY=your_openai_api_key
+GOOGLE_USERNAME=your_google_email
+GOOGLE_PASSWORD=your_google_password
 ```
 
 ## Usage
 
-Run the program:
 ```bash
-python app.py
+# Fetch history for the last N days (URL + timestamp only)
+python find-watched.py --days 7
+
+# Fetch history with titles/authors/transcripts, optionally summarize
+python find-watched-videos.py --days 2
+python find-watched-videos.py --days 2 --summarize
+
+# Specify an explicit date range
+python find-watched.py --start-date 2024-02-01 --end-date 2024-02-15
 ```
 
-The program will:
-1. Authenticate with YouTube (first time will open a browser for OAuth)
-2. Fetch your watch history for the past 7 days
-3. Get transcripts and descriptions for each video
-4. Generate summaries using OpenAI's GPT-4
-5. Save results to a JSON file named `youtube_summaries_YYYYMMDD.json`
+On first run a browser window will open for Google login. If 2FA is required, complete it in the browser and press Enter in the terminal when done.
 
-The output JSON will contain:
-- Video details (ID, title, author, watch date)
-- Summary of the video content
-- Key points discussed
-- Main learnings from the video
+Output:
+- `find-watched.py` → `data/watched_<start>-<end>.json`
+- `find-watched-videos.py` → `video_info.json` and (with `--summarize`) `youtube_summaries_YYYYMMDD.json`
 
 ## Notes
 
-- The program requires YouTube OAuth authentication to access your watch history
-- Video transcripts are retrieved when available; otherwise, video descriptions are used
-- Summaries are generated using OpenAI's GPT-4 model
-- Results are saved in JSON format for easy parsing and integration with other tools
+- Watch history is scraped from `myactivity.google.com` via an AI-controlled browser; no YouTube Data API key is required
+- Video transcripts are retrieved when available via `youtube-transcript-api`; summaries fall back to video descriptions
+- Summaries are generated using OpenAI GPT-4
