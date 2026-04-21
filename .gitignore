@@ -174,3 +174,6 @@ youtube_summaries*
 agent_history.gif
 
 data/*
+.DS_Store
+config/token.json
+config/credentials.json

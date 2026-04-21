@@ -1,0 +1,9 @@
+Place the following files in this directory:
+
+  credentials.json  — OAuth client secret downloaded from Google Cloud Console
+                      (APIs & Services → Credentials → OAuth 2.0 Client ID → Download JSON)
+
+  token.json        — Generated automatically on first run (browser OAuth flow)
+                      Delete this file to force re-authentication.
+
+Both files are gitignored and must never be committed.
